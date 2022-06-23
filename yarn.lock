@@ -2857,7 +2857,7 @@
   dependencies:
     "chokidar" "^3.5.3"
 
-"hardhat@^2.0.0", "hardhat@^2.9.9":
+"hardhat@^2.0.0":
   "integrity" "sha512-Qv7SXnRc0zq1kGXruNnSKpP3eFccXMR5Qv6GVX9hBIJ5efN0PflKPq92aQ5Cv3jrjJeRevLznWZVz7bttXhVfw=="
   "resolved" "https://registry.npmjs.org/hardhat/-/hardhat-2.9.9.tgz"
   "version" "2.9.9"
