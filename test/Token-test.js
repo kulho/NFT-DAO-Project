@@ -2,7 +2,7 @@ const Epoch = artifacts.require("Epoch");
 const Token = artifacts.require("GovernanceToken");
 const { expectRevert, balance } = require("@openzeppelin/test-helpers");
 
-contract("Token test", (accounts) => {
+contract("Governance token tests", (accounts) => {
   let token, nft;
 
   beforeEach(async () => {
@@ -48,12 +48,31 @@ contract("Token test", (accounts) => {
     assert.equal(balance, web3.utils.toWei("10", "ether").toString());
   });
 
-  it.skip("template", async () => {
-    assert(true);
+  it("it is possible to receive reward for multiple nfts", async () => {
+    let balanceBefore = await token.balanceOf(accounts[0]);
+    await nft.claimNFT({
+      from: accounts[0],
+      value: web3.utils.toWei("0.05", "ether"),
+    });
+    await nft.claimNFT({
+      from: accounts[0],
+      value: web3.utils.toWei("0.05", "ether"),
+    });
+    await nft.claimNFT({
+      from: accounts[0],
+      value: web3.utils.toWei("0.05", "ether"),
+    });
+    await token.claimTokenFromNfts({ from: accounts[0] });
+    let balanceAfter = await token.balanceOf(accounts[0]);
+    let balance = balanceAfter - balanceBefore;
+    assert.equal(balance, web3.utils.toWei("30", "ether").toString());
   });
 
-  it.skip("template", async () => {
-    assert(true);
+  it("Final check for no overclaiming per nft", async () => {
+    await expectRevert(
+      token.claimTokenFromNfts({ from: accounts[0] }),
+      "All of your NFTs have already been claimed."
+    );
   });
 
   it.skip("template", async () => {
