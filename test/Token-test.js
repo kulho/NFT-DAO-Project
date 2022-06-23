@@ -1,6 +1,6 @@
 const Epoch = artifacts.require("Epoch");
 const Token = artifacts.require("GovernanceToken");
-const { expectRevert, balance } = require("@openzeppelin/test-helpers");
+const { expectRevert } = require("@openzeppelin/test-helpers");
 
 contract("Governance token tests", (accounts) => {
   let token, nft;
