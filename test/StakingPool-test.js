@@ -9,7 +9,7 @@ INITIAL_POOL_PRICE = 2000;
 INITIAL_ETH_LIQUIDITY = 5;
 REWARD_RATE = 10;
 
-contract("Governance token tests", (accounts) => {
+contract("Staking pool tests", (accounts) => {
   let token, pool;
 
   beforeEach(async () => {
@@ -23,7 +23,49 @@ contract("Governance token tests", (accounts) => {
     pool = await Pool.new(token.address, accounts[0]);
   });
 
-  it("template", async () => {
+  it("it is possible to stake tokens", async () => {
+    let balance = await token.balanceOf(accounts[0]);
+    await token.approve(pool.address, balance);
+    await pool.stake(balance);
+  });
+
+  it.skip("it is possible to withdraw tokens", async () => {
+    assert(true);
+  });
+
+  it.skip("it is possible to exit", async () => {
+    assert(true);
+  });
+
+  it.skip("it is possible to set the delegation address", async () => {
+    assert(true);
+  });
+
+  it.skip("it is possible to notify the new rewards", async () => {
+    assert(true);
+  });
+
+  it.skip("it is possible to collect rewards", async () => {
+    assert(true);
+  });
+
+  it.skip("it is possible to set the new rewards duration", async () => {
+    assert(true);
+  });
+
+  it.skip("it is possible to update reward", async () => {
+    assert(true);
+  });
+
+  it.skip("template", async () => {
+    assert(true);
+  });
+
+  it.skip("template", async () => {
+    assert(true);
+  });
+
+  it.skip("template", async () => {
     assert(true);
   });
 
