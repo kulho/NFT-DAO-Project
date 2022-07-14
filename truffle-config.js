@@ -4,9 +4,6 @@ module.exports = {
       host: "127.0.0.1",
       port: 8545,
       network_id: "*",
-      fork: {
-        network: "rinkeby",
-      },
     },
     loc_development_development: {
       network_id: "*",
@@ -17,10 +14,6 @@ module.exports = {
       network_id: "*",
       port: 8545,
       host: "127.0.0.1",
-      logging: {
-        debug: true,
-        verbose: true,
-      },
     },
   },
   mocha: {},
