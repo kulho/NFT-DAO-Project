@@ -69,10 +69,7 @@ contract StakingPool is Ownable {
 
     function stake(uint256 _amount) external updateReward(msg.sender) {
         require(_amount > 0, "Amount must be greater than 0");
-        require(
-            IERC20(token).transferFrom(msg.sender, address(this), _amount),
-            "Check for approval or sufficient balance"
-        );
+        IERC20(token).transferFrom(msg.sender, address(this), _amount);
         _totalSupply += _amount;
         _balances[msg.sender] += _amount;
     }
