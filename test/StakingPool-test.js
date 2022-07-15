@@ -10,6 +10,7 @@ INITIAL_POOL_PRICE = 2000;
 INITIAL_ETH_LIQUIDITY = 5;
 REWARD_RATE = 10;
 WEEK = 604800;
+GWEI_BN = new BN(1000000000);
 
 contract("Staking pool tests", async (accounts) => {
   let token, pool;
@@ -100,7 +101,7 @@ contract("Staking pool tests", async (accounts) => {
       await time.increase(WEEK);
       await pool.getReward();
       let newBalance = await token.balanceOf(accounts[0]);
-      assert(balance.div(new BN(2)).sub(newBalance).lt(new BN("1e9")));
+      assert(balance.div(new BN(2)).sub(newBalance).lt(GWEI_BN));
     });
 
     it("should not receive any reward if zero", async () => {
@@ -125,7 +126,7 @@ contract("Staking pool tests", async (accounts) => {
       await time.increase(WEEK);
       await pool.exit();
       let newBalance = await token.balanceOf(accounts[0]);
-      assert(balance.div(new BN(2)).sub(newBalance).lt(new BN("1e9")));
+      assert(balance.div(new BN(2)).sub(newBalance).lt(GWEI_BN));
     });
 
     it("it is possible to exit even without reward", async () => {
@@ -200,11 +201,7 @@ contract("Staking pool tests", async (accounts) => {
       let rewardBefore = await pool.rewardRate();
       await token.transfer(pool.address, balance.div(new BN(2)));
       await pool.notifyRewardAmount();
-      //   console.log(tx);
       let rewardAfter = await pool.rewardRate();
-      console.log(rewardAfter.toString());
-      console.log(rewardBefore.toString());
-      console.log(rewardBefore.lt(rewardAfter));
       assert(rewardBefore.lt(rewardAfter));
     });
   });
