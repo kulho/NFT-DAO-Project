@@ -21,6 +21,7 @@ contract StakingPool is Ownable {
     mapping(address => uint256) public rewards;
 
     uint256 private _totalSupply;
+    uint256 private _rewardBalance;
     mapping(address => uint256) private _balances;
 
     constructor(address _tokenAddress, address _delegationAddress) {
@@ -89,6 +90,7 @@ contract StakingPool is Ownable {
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
+            _rewardBalance -= reward;
             IERC20(token).transfer(msg.sender, reward);
         }
     }
@@ -108,43 +110,25 @@ contract StakingPool is Ownable {
 
     function notifyRewardAmount() external onlyOwner updateReward(address(0)) {
         // Check if new tokens were sent to the pool
-        uint256 reward = IERC20(token).balanceOf(address(this)).sub(
-            _totalSupply
-        );
+        uint256 reward = IERC20(token)
+            .balanceOf(address(this))
+            .sub(_totalSupply)
+            .sub(_rewardBalance);
         require(reward > 0, "No tokens were sent to the pool");
 
         if (block.timestamp >= periodFinish) {
             rewardRate = reward.div(rewardsDuration);
+            _rewardBalance = reward;
         } else {
             uint256 remaining = periodFinish.sub(block.timestamp);
             uint256 leftover = remaining.mul(rewardRate);
-            rewardRate = reward.add(leftover).div(rewardsDuration);
+            _rewardBalance = reward.add(leftover);
+            rewardRate = _rewardBalance.div(rewardsDuration);
         }
 
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
     }
-
-    // function notifyRewardAmount() external onlyOwner updateReward(address(0)) {
-    //     // Check if new tokens were sent to the pool
-    //     uint256 reward = IERC20(token).balanceOf(address(this)).sub(
-    //         _totalSupply
-    //     );
-    //     emit Number(reward);
-    //     require(reward > 0, "No tokens were sent to the pool");
-
-    //     if (block.timestamp >= periodFinish) {
-    //         rewardRate = reward.div(rewardsDuration);
-    //     } else {
-    //         uint256 remaining = periodFinish.sub(block.timestamp);
-    //         uint256 leftover = remaining.mul(rewardRate);
-    //         rewardRate = reward.add(leftover).div(rewardsDuration);
-    //     }
-    //     emit Number(rewardRate);
-
-    //     lastUpdateTime = block.timestamp;
-    //     periodFinish = block.timestamp.add(rewardsDuration);
-    // }
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
         require(
