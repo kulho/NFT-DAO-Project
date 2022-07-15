@@ -82,13 +82,15 @@ contract StakingPool is Ownable {
         );
         _totalSupply -= _amount;
         _balances[msg.sender] -= _amount;
+        IERC20(token).transfer(msg.sender, _amount);
     }
 
     function getReward() public updateReward(msg.sender) {
         uint256 reward = rewards[msg.sender];
-        require(reward > 0, "You have no reward");
-        rewards[msg.sender] = 0;
-        IERC20(token).transfer(msg.sender, reward);
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            IERC20(token).transfer(msg.sender, reward);
+        }
     }
 
     function exit() external {
@@ -122,6 +124,27 @@ contract StakingPool is Ownable {
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
     }
+
+    // function notifyRewardAmount() external onlyOwner updateReward(address(0)) {
+    //     // Check if new tokens were sent to the pool
+    //     uint256 reward = IERC20(token).balanceOf(address(this)).sub(
+    //         _totalSupply
+    //     );
+    //     emit Number(reward);
+    //     require(reward > 0, "No tokens were sent to the pool");
+
+    //     if (block.timestamp >= periodFinish) {
+    //         rewardRate = reward.div(rewardsDuration);
+    //     } else {
+    //         uint256 remaining = periodFinish.sub(block.timestamp);
+    //         uint256 leftover = remaining.mul(rewardRate);
+    //         rewardRate = reward.add(leftover).div(rewardsDuration);
+    //     }
+    //     emit Number(rewardRate);
+
+    //     lastUpdateTime = block.timestamp;
+    //     periodFinish = block.timestamp.add(rewardsDuration);
+    // }
 
     function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
         require(
