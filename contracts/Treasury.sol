@@ -272,9 +272,9 @@ contract Treasury is IERC721Receiver, PeripheryImmutableState, Ownable {
         amountOut = swapRouter.exactInputSingle(params);
     }
 
-    function transferToPool() external onlyOwner {
+    function approveToPool() external onlyOwner {
         uint256 value = IERC20(token).balanceOf(address(this));
-        TransferHelper.safeTransfer(token, stakingPool, value);
+        TransferHelper.safeApprove(token, stakingPool, value);
     }
 
     receive() external payable {}
