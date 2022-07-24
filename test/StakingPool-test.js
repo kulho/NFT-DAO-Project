@@ -2,6 +2,7 @@ const Pool = artifacts.require("StakingPool");
 const Token = artifacts.require("GovernanceToken");
 const { expectRevert, BN } = require("@openzeppelin/test-helpers");
 const { time } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 
 EPOCH_ADDRESS = "0xBAc959f049066b3F699D1FbBd62a755c55C19752";
 NAME = "GovernanceToken";
@@ -96,8 +97,8 @@ contract("Staking pool tests", async (accounts) => {
       let balance = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balance.div(new BN(2)));
       await pool.stake(balance.div(new BN(2)));
-      await token.transfer(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance.div(new BN(2)));
+      await pool.notifyRewardAmount(balance.div(new BN(2)));
       await time.increase(WEEK);
       await pool.getReward();
       let newBalance = await token.balanceOf(accounts[0]);
@@ -106,8 +107,8 @@ contract("Staking pool tests", async (accounts) => {
 
     it("should not receive any reward if zero", async () => {
       let balance = await token.balanceOf(accounts[0]);
-      await token.transfer(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance.div(new BN(2)));
+      await pool.notifyRewardAmount(balance.div(new BN(2)));
 
       await time.increase(WEEK);
       await pool.getReward();
@@ -121,8 +122,8 @@ contract("Staking pool tests", async (accounts) => {
       let balance = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balance.div(new BN(2)));
       await pool.stake(balance.div(new BN(2)));
-      await token.transfer(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance.div(new BN(2)));
+      await pool.notifyRewardAmount(balance.div(new BN(2)));
       await time.increase(WEEK);
       await pool.exit();
       let newBalance = await token.balanceOf(accounts[0]);
@@ -164,43 +165,34 @@ contract("Staking pool tests", async (accounts) => {
   describe("notifyRewardAmount", () => {
     it("it is possible to notify the new rewards", async () => {
       let balance = await token.balanceOf(accounts[0]);
-      await token.transfer(pool.address, balance);
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance);
+      await pool.notifyRewardAmount(balance);
     });
 
     it("should revert if not called by the owner", async () => {
       let balance = await token.balanceOf(accounts[0]);
-      await token.transfer(pool.address, balance);
+      await token.approve(pool.address, balance);
       await expectRevert(
-        pool.notifyRewardAmount({ from: accounts[1] }),
+        pool.notifyRewardAmount(balance, { from: accounts[1] }),
         "Ownable: caller is not the owner"
       );
     });
 
-    it("should revert if no tokens were sent to the pool", async () => {
-      await expectRevert(
-        pool.notifyRewardAmount(),
-        "No tokens were sent to the pool"
-      );
+    it("should revert if no tokens were approved to the pool", async () => {
+      await expectRevert(pool.notifyRewardAmount(10), "STF");
     });
 
-    it("should revert if no tokens were sent to the pool and the pool holds tokens", async () => {
-      let balance = await token.balanceOf(accounts[0]);
-      await token.approve(pool.address, balance);
-      await pool.stake(balance);
-      await expectRevert(
-        pool.notifyRewardAmount(),
-        "No tokens were sent to the pool"
-      );
+    it("should revert reward is null", async () => {
+      await expectRevert(pool.notifyRewardAmount(0), "Reward must not be null");
     });
 
     it("it is possible to update the reward", async () => {
       let balance = await token.balanceOf(accounts[0]);
-      await token.transfer(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance.div(new BN(2)));
+      await pool.notifyRewardAmount(balance.div(new BN(2)));
       let rewardBefore = await pool.rewardRate();
-      await token.transfer(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance.div(new BN(2)));
+      await pool.notifyRewardAmount(balance.div(new BN(2)));
       let rewardAfter = await pool.rewardRate();
       assert(rewardBefore.lt(rewardAfter));
     });
@@ -222,8 +214,8 @@ contract("Staking pool tests", async (accounts) => {
 
     it("should revert if the period did not finish yet", async () => {
       let balance = await token.balanceOf(accounts[0]);
-      await token.transfer(pool.address, balance);
-      await pool.notifyRewardAmount();
+      await token.approve(pool.address, balance);
+      await pool.notifyRewardAmount(balance);
       await expectRevert(
         pool.setRewardsDuration(10),
         "Previous rewards period must be complete before changing the duration for the new period"
@@ -231,7 +223,26 @@ contract("Staking pool tests", async (accounts) => {
     });
   });
 
-  describe.skip("template", () => {
-    it.skip("template", async () => {});
+  describe("integration test", () => {
+    it("verify math adds up over multiple rewards", async () => {
+      let balance, balanceBefore, newBalance, i, random, value;
+      balanceBefore = await token.balanceOf(accounts[0]);
+      await token.approve(pool.address, balanceBefore.div(new BN(2)));
+      await pool.stake(balanceBefore.div(new BN(2)));
+      for (i = 0; i < 100; i++) {
+        random = new BN(web3.utils.randomHex(1).toString().slice(2));
+        if (random.eq(new BN(0))) random = new BN(1);
+        balance = await token.balanceOf(accounts[0]);
+        value = balance.mul(random).div(new BN(256));
+        await token.approve(pool.address, value);
+        await pool.notifyRewardAmount(value);
+        await time.increase(WEEK / 2);
+        await pool.getReward({ gas: 30000000 });
+      }
+      await time.increase(WEEK);
+      await pool.getReward({ gas: 30000000 });
+      newBalance = await token.balanceOf(accounts[0]);
+      assert(balanceBefore.div(new BN(2)).sub(newBalance).lt(GWEI_BN));
+    });
   });
 });
