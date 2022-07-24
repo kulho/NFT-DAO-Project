@@ -4,15 +4,19 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract StakingPool is Ownable {
     using SafeMath for uint256;
 
+    event Number(uint256);
+    uint256 i;
+
     address public token;
     address public delegationAddress;
-    uint256 public periodFinish = 0;
-    uint256 public rewardRate = 0;
+    uint256 public periodFinish;
+    uint256 public rewardRate;
     uint256 public rewardsDuration = 7 days;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
@@ -21,7 +25,6 @@ contract StakingPool is Ownable {
     mapping(address => uint256) public rewards;
 
     uint256 private _totalSupply;
-    uint256 private _rewardBalance;
     mapping(address => uint256) private _balances;
 
     constructor(address _tokenAddress, address _delegationAddress) {
@@ -90,7 +93,6 @@ contract StakingPool is Ownable {
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            _rewardBalance -= reward;
             IERC20(token).transfer(msg.sender, reward);
         }
     }
@@ -108,22 +110,26 @@ contract StakingPool is Ownable {
         IVotes(token).delegate(_address);
     }
 
-    function notifyRewardAmount() external onlyOwner updateReward(address(0)) {
+    function notifyRewardAmount(uint256 reward)
+        external
+        onlyOwner
+        updateReward(address(0))
+    {
         // Check if new tokens were sent to the pool
-        uint256 reward = IERC20(token)
-            .balanceOf(address(this))
-            .sub(_totalSupply)
-            .sub(_rewardBalance);
-        require(reward > 0, "No tokens were sent to the pool");
+        require(reward > 0, "Reward must not be null");
+        TransferHelper.safeTransferFrom(
+            token,
+            msg.sender,
+            address(this),
+            reward
+        );
 
         if (block.timestamp >= periodFinish) {
             rewardRate = reward.div(rewardsDuration);
-            _rewardBalance = reward;
         } else {
             uint256 remaining = periodFinish.sub(block.timestamp);
             uint256 leftover = remaining.mul(rewardRate);
-            _rewardBalance = reward.add(leftover);
-            rewardRate = _rewardBalance.div(rewardsDuration);
+            rewardRate = reward.add(leftover).div(rewardsDuration);
         }
 
         lastUpdateTime = block.timestamp;
