@@ -3,6 +3,7 @@ var RLP = require("rlp");
 const Treasury = artifacts.require("Treasury");
 const Token = artifacts.require("GovernanceToken");
 const Pool = artifacts.require("StakingPool");
+const UniswapPool = artifacts.require("IUniswapV3Pool");
 
 const { expectRevert } = require("@openzeppelin/test-helpers");
 
@@ -102,8 +103,39 @@ contract("Governance token tests", (accounts) => {
       assert.equal(stakingPoolAddress, stakingPool.address);
     });
 
-    it("uniswap pool initialized correctly", async () => {
-      let poolFee, price, token0, token1;
+    it.only("uniswap pool initialized correctly", async () => {
+      let poolFee, liquidity, token0, token1, uniswapPool, poolAddress, slot0;
+      poolAddress = await treasury.uniswapPool();
+      uniswapPool = await UniswapPool.at(poolAddress);
+
+      poolFee = await uniswapPool.fee();
+      assert.equal(poolFee, POOL_FEE);
+
+      liquidity = await uniswapPool.liquidity();
+      assert(liquidity.gt(new BN(0)));
+
+      slot0 = await uniswapPool.slot0();
+      token0 = await uniswapPool.token0();
+      token1 = await uniswapPool.token1();
+
+      let wethBN = new BN(WETH);
+      let tokenBN = new BN(token.address);
+
+      if (wethBN.lt(tokenBN)) {
+        assert.equal(
+          slot0.sqrtPriceX96.toString(),
+          SQRTPRICEX96_WETH.toString()
+        );
+        assert.equal(token0, WETH);
+        assert.equal(token1, token.address);
+      } else {
+        assert.equal(
+          slot0.sqrtPriceX96.toString(),
+          SQRTPRICEX96_TOKEN.toString()
+        );
+        assert.equal(token0, token.address);
+        assert.equal(token1, WETH);
+      }
     });
   });
 
