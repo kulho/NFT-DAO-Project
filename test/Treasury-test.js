@@ -103,7 +103,7 @@ contract("Governance token tests", (accounts) => {
       assert.equal(stakingPoolAddress, stakingPool.address);
     });
 
-    it.only("uniswap pool initialized correctly", async () => {
+    it("uniswap pool initialized correctly", async () => {
       let poolFee, liquidity, token0, token1, uniswapPool, poolAddress, slot0;
       poolAddress = await treasury.uniswapPool();
       uniswapPool = await UniswapPool.at(poolAddress);
@@ -136,6 +136,46 @@ contract("Governance token tests", (accounts) => {
         assert.equal(token0, token.address);
         assert.equal(token1, WETH);
       }
+    });
+  });
+
+  describe("collectAllFees", async () => {
+    it.skip("its is possible to collect fees", async () => {
+      assert(true);
+    });
+
+    it.skip("should revert if not called by the owner", async () => {
+      assert(true);
+    });
+  });
+
+  describe("swapAllWeth", async () => {
+    it.skip("it is possible to swap weth for token", async () => {
+      assert(true);
+    });
+
+    it.skip("it is possible to swap eth for token", async () => {
+      assert(true);
+    });
+
+    it.skip("should revert if not called by the owner", async () => {
+      assert(true);
+    });
+  });
+
+  describe("approveToPool", async () => {
+    it.skip("it is possible to approve tokens to the pool", async () => {
+      assert(true);
+    });
+
+    it.skip("approved tokens can be withdrawn from the treasury", async () => {
+      assert(true);
+    });
+  });
+
+  describe("integration test", async () => {
+    it.skip("create and collect fees, swap to token, approve pool and collect by the pool", async () => {
+      assert(true);
     });
   });
 
