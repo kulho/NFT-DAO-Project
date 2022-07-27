@@ -4,6 +4,8 @@ const Treasury = artifacts.require("Treasury");
 const Token = artifacts.require("GovernanceToken");
 const Pool = artifacts.require("StakingPool");
 const UniswapPool = artifacts.require("IUniswapV3Pool");
+const SwapRouter = artifacts.require("ISwapRouter");
+const WETH9 = artifacts.require("IWETH9");
 
 const { expectRevert } = require("@openzeppelin/test-helpers");
 
@@ -140,8 +142,32 @@ contract("Governance token tests", (accounts) => {
   });
 
   describe("collectAllFees", async () => {
-    it.skip("its is possible to collect fees", async () => {
-      assert(true);
+    it("its is possible to collect fees", async () => {
+      let swapRouter, params;
+
+      //to do swap weth
+
+      swapRouter = await SwapRouter.at(SWAP_ROUTER);
+      params = {
+        tokenIn: WETH9,
+        tokenOut: token,
+        fee: poolFee,
+        recipient: address(this),
+        deadline: block.timestamp,
+        amountIn: wethBalance,
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      };
+
+      // swap weth to token
+
+      // swap token to weth
+
+      // repeat
+
+      // collect fees at treasury
+
+      // assert that treasury collected fees
     });
 
     it.skip("should revert if not called by the owner", async () => {
