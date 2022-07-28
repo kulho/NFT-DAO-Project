@@ -8,6 +8,7 @@ const SwapRouter = artifacts.require("ISwapRouter");
 const WETH9 = artifacts.require("IWETH9");
 
 const { expectRevert } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 
 EPOCH_ADDRESS = "0xBAc959f049066b3F699D1FbBd62a755c55C19752";
 NAME = "GovernanceToken";
@@ -26,6 +27,7 @@ const POOL_FEE = 3000;
 var BN = web3.utils.BN;
 const SQRTPRICEX96_WETH = new BN("3543191142285914205922034323214");
 const SQRTPRICEX96_TOKEN = new BN("1771595571142957102961017161");
+const ZERO = new BN(0);
 
 contract("Governance token tests", (accounts) => {
   let token, stakingPool, treasury;
@@ -114,7 +116,7 @@ contract("Governance token tests", (accounts) => {
       assert.equal(poolFee, POOL_FEE);
 
       liquidity = await uniswapPool.liquidity();
-      assert(liquidity.gt(new BN(0)));
+      assert(liquidity.gt(ZERO));
 
       slot0 = await uniswapPool.slot0();
       token0 = await uniswapPool.token0();
@@ -142,23 +144,65 @@ contract("Governance token tests", (accounts) => {
   });
 
   describe("collectAllFees", async () => {
-    it("its is possible to collect fees", async () => {
-      let swapRouter, params;
+    const swapWeth2Token = async (swapRouter, value) => {
+      let params, block, timestamp;
 
-      //to do swap weth
+      block = await web3.eth.getBlock("latest");
+      timestamp = block.timestamp + 1000;
 
-      swapRouter = await SwapRouter.at(SWAP_ROUTER);
       params = {
-        tokenIn: WETH9,
-        tokenOut: token,
-        fee: poolFee,
-        recipient: address(this),
-        deadline: block.timestamp,
-        amountIn: wethBalance,
+        tokenIn: WETH,
+        tokenOut: token.address,
+        fee: POOL_FEE,
+        recipient: accounts[0],
+        deadline: timestamp,
+        amountIn: value,
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      };
+      console.log(params);
+      await swapRouter.exactInputSingle(params);
+    };
+
+    const swapToken2Weth = async (swapRouter, value) => {
+      let params, block, timestamp;
+
+      block = await web3.eth.getBlock("latest");
+      timestamp = block.timestamp + 1000;
+
+      params = {
+        tokenIn: token.address,
+        tokenOut: WETH,
+        fee: POOL_FEE,
+        recipient: accounts[0],
+        deadline: timestamp,
+        amountIn: value,
         amountOutMinimum: 0,
         sqrtPriceLimitX96: 0,
       };
 
+      console.log(params);
+      await swapRouter.exactInputSingle(params);
+    };
+
+    it.only("its is possible to collect fees", async () => {
+      let swapRouter, weth9, wethValue, tokenValue;
+
+      weth9 = await WETH9.at(WETH);
+      wethValue = web3.utils.toWei("2", "ether");
+      weth9.deposit({ from: accounts[0], value: wethValue });
+      weth9.approve(SWAP_ROUTER, wethValue, { from: accounts[0] });
+
+      swapRouter = await SwapRouter.at(SWAP_ROUTER);
+      await swapWeth2Token(swapRouter, wethValue);
+      tokenValue = await token.balanceOf(accounts[0]);
+      assert(tokenValue.gt(ZERO));
+      console.log(tokenValue.toString());
+      await token.approve(SWAP_ROUTER, tokenValue, { from: accounts[0] });
+      await swapToken2Weth(swapRouter, tokenValue.toString());
+      wethValue = await weth9.balanceOf(accounts[0]);
+      assert(wethValue.gt(ZERO));
+      console.log(wethValue.toString());
       // swap weth to token
 
       // swap token to weth
