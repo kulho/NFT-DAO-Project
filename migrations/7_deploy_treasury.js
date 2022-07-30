@@ -64,6 +64,8 @@ module.exports = async function (deployer, _, accounts) {
   );
   let treasury = await Treasury.deployed();
 
+  // TODO add treasury address to staking pool contract and transfer its ownership
+
   governanceTimeLock = await GovernanceTimeLock.deployed();
   await treasury.transferOwnership(governanceTimeLock.address, {
     from: accounts[0],

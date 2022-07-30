@@ -8,6 +8,7 @@ module.exports = async function (deployer, _, accounts) {
   await deployer.deploy(StakingPool, token.address, accounts[0]);
   let stakingPool = await StakingPool.deployed();
 
+  // TODO move owner transfer to treasury deployment
   governanceTimeLock = await GovernanceTimeLock.deployed();
   await stakingPool.transferOwnership(governanceTimeLock.address, {
     from: accounts[0],
