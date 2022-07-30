@@ -32,6 +32,44 @@ const ZERO = new BN(0);
 contract("Governance token tests", (accounts) => {
   let token, stakingPool, treasury;
 
+  const swapWeth2Token = async (swapRouter, value) => {
+    let params, block, timestamp;
+
+    block = await web3.eth.getBlock("latest");
+    timestamp = block.timestamp + 1000;
+
+    params = {
+      tokenIn: WETH,
+      tokenOut: token.address,
+      fee: POOL_FEE,
+      recipient: accounts[0],
+      deadline: timestamp,
+      amountIn: value,
+      amountOutMinimum: 0,
+      sqrtPriceLimitX96: 0,
+    };
+    await swapRouter.exactInputSingle(params);
+  };
+
+  const swapToken2Weth = async (swapRouter, value) => {
+    let params, block, timestamp;
+
+    block = await web3.eth.getBlock("latest");
+    timestamp = block.timestamp + 1000;
+
+    params = {
+      tokenIn: token.address,
+      tokenOut: WETH,
+      fee: POOL_FEE,
+      recipient: accounts[0],
+      deadline: timestamp,
+      amountIn: value,
+      amountOutMinimum: 0,
+      sqrtPriceLimitX96: 0,
+    };
+    await swapRouter.exactInputSingle(params);
+  };
+
   beforeEach(async () => {
     token = await Token.new(
       NAME,
@@ -144,92 +182,117 @@ contract("Governance token tests", (accounts) => {
   });
 
   describe("collectAllFees", async () => {
-    const swapWeth2Token = async (swapRouter, value) => {
-      let params, block, timestamp;
-
-      block = await web3.eth.getBlock("latest");
-      timestamp = block.timestamp + 1000;
-
-      params = {
-        tokenIn: WETH,
-        tokenOut: token.address,
-        fee: POOL_FEE,
-        recipient: accounts[0],
-        deadline: timestamp,
-        amountIn: value,
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      };
-      console.log(params);
-      await swapRouter.exactInputSingle(params);
-    };
-
-    const swapToken2Weth = async (swapRouter, value) => {
-      let params, block, timestamp;
-
-      block = await web3.eth.getBlock("latest");
-      timestamp = block.timestamp + 1000;
-
-      params = {
-        tokenIn: token.address,
-        tokenOut: WETH,
-        fee: POOL_FEE,
-        recipient: accounts[0],
-        deadline: timestamp,
-        amountIn: value,
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      };
-
-      console.log(params);
-      await swapRouter.exactInputSingle(params);
-    };
-
-    it.only("its is possible to collect fees", async () => {
-      let swapRouter, weth9, wethValue, tokenValue;
-
+    it("its is possible to collect fees", async () => {
+      let swapRouter,
+        weth9,
+        wethValue,
+        tokenValue,
+        tokenBalanceBefore,
+        tokenBalanceAfter,
+        wethBalanceBefore,
+        wethBalanceAfter;
+      // create contracts
       weth9 = await WETH9.at(WETH);
-      wethValue = web3.utils.toWei("2", "ether");
-      weth9.deposit({ from: accounts[0], value: wethValue });
-      weth9.approve(SWAP_ROUTER, wethValue, { from: accounts[0] });
-
       swapRouter = await SwapRouter.at(SWAP_ROUTER);
+
+      // get weth and swap it for tokens
+      wethValue = web3.utils.toWei("2", "ether");
+      await weth9.deposit({ from: accounts[0], value: wethValue });
+      await weth9.approve(SWAP_ROUTER, wethValue, { from: accounts[0] });
       await swapWeth2Token(swapRouter, wethValue);
+
+      // assert weth was swapped
       tokenValue = await token.balanceOf(accounts[0]);
       assert(tokenValue.gt(ZERO));
-      console.log(tokenValue.toString());
+
+      // approve and swap tokens to weth
       await token.approve(SWAP_ROUTER, tokenValue, { from: accounts[0] });
       await swapToken2Weth(swapRouter, tokenValue.toString());
+
+      // assert tokens were swapped
       wethValue = await weth9.balanceOf(accounts[0]);
       assert(wethValue.gt(ZERO));
-      console.log(wethValue.toString());
-      // swap weth to token
 
-      // swap token to weth
-
-      // repeat
-
-      // collect fees at treasury
-
-      // assert that treasury collected fees
+      // balance before
+      tokenBalanceBefore = await token.balanceOf(treasury.address);
+      wethBalanceBefore = await weth9.balanceOf(treasury.address);
+      // collect fees
+      await treasury.collectAllFees();
+      // balance after
+      tokenBalanceAfter = await token.balanceOf(treasury.address);
+      wethBalanceAfter = await weth9.balanceOf(treasury.address);
+      // assert fees were received
+      assert(tokenBalanceBefore.lt(tokenBalanceAfter));
+      assert(wethBalanceBefore.lt(wethBalanceAfter));
     });
 
-    it.skip("should revert if not called by the owner", async () => {
-      assert(true);
+    it("should revert if not called by the owner", async () => {
+      await expectRevert(
+        treasury.collectAllFees({ from: accounts[1] }),
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
   describe("swapAllWeth", async () => {
-    it.skip("it is possible to swap weth for token", async () => {
-      assert(true);
+    it("it is possible to swap weth for token", async () => {
+      let weth9, wethValue, balanceBefore, balanceAfter;
+      weth9 = await WETH9.at(WETH);
+      wethValue = web3.utils.toWei("2", "ether");
+      await weth9.deposit({ from: accounts[0], value: wethValue });
+      await weth9.transfer(treasury.address, wethValue);
+
+      balanceBefore = await token.balanceOf(treasury.address);
+      await treasury.swapAllWeth();
+      balanceAfter = await token.balanceOf(treasury.address);
+
+      assert(balanceBefore.lt(balanceAfter));
     });
 
-    it.skip("it is possible to swap eth for token", async () => {
-      assert(true);
+    it("it is possible to swap eth for token", async () => {
+      let balanceBefore, balanceAfter;
+      await web3.eth.sendTransaction({
+        from: accounts[0],
+        to: treasury.address,
+        value: web3.utils.toWei("2", "ether"),
+      });
+      balanceBefore = await token.balanceOf(treasury.address);
+      await treasury.swapAllWeth();
+      balanceAfter = await token.balanceOf(treasury.address);
+
+      assert(balanceBefore.lt(balanceAfter));
     });
 
-    it.skip("should revert if not called by the owner", async () => {
-      assert(true);
+    it("eth and weth should add and swap for token", async () => {
+      let weth9, wethValue, balanceBefore, balanceAfter;
+
+      weth9 = await WETH9.at(WETH);
+      wethValue = web3.utils.toWei("2", "ether");
+      await weth9.deposit({ from: accounts[0], value: wethValue });
+      await weth9.transfer(treasury.address, wethValue);
+
+      await web3.eth.sendTransaction({
+        from: accounts[0],
+        to: treasury.address,
+        value: web3.utils.toWei("2", "ether"),
+      });
+
+      balanceBefore = await token.balanceOf(treasury.address);
+      await treasury.swapAllWeth();
+      balanceAfter = await token.balanceOf(treasury.address);
+
+      assert(balanceBefore.lt(balanceAfter));
+    });
+
+    it("should revert if no eth or weth in the contracts", async () => {
+      await expectRevert(treasury.swapAllWeth(), "AS");
+    });
+
+    it("should revert if not called by the owner", async () => {
+      await expectRevert(
+        treasury.swapAllWeth({ from: accounts[1] }),
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
