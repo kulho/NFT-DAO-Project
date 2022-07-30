@@ -311,7 +311,7 @@ contract("Governance token tests", (accounts) => {
       assert(balance.eq(allowance));
     });
 
-    it.only("approved tokens can be withdrawn from the treasury", async () => {
+    it("approved tokens can be withdrawn from the treasury", async () => {
       let balanceBefore, balanceAfter;
       await stakingPool.setTreasuryAddress(treasury.address);
       await web3.eth.sendTransaction({
@@ -327,9 +327,9 @@ contract("Governance token tests", (accounts) => {
       assert(balanceBefore.eq(balanceAfter));
     });
 
-    it.only("should revert if not called by the owner", async () => {
+    it("should revert if not called by the owner", async () => {
       await expectRevert(
-        treasury.approveToPool(0, { from: accounts[1] }),
+        treasury.approveToPool({ from: accounts[1] }),
         "Ownable: caller is not the owner"
       );
     });
