@@ -10,11 +10,9 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract StakingPool is Ownable {
     using SafeMath for uint256;
 
-    event Number(uint256);
-    uint256 i;
-
     address public token;
     address public delegationAddress;
+    address public treasuryAddress;
     uint256 public periodFinish;
     uint256 public rewardRate;
     uint256 public rewardsDuration = 7 days;
@@ -110,6 +108,11 @@ contract StakingPool is Ownable {
         IVotes(token).delegate(_address);
     }
 
+    function setTreasuryAddress(address _address) external onlyOwner {
+        // not restricting address(0) on purpose
+        treasuryAddress = _address;
+    }
+
     function notifyRewardAmount(uint256 reward)
         external
         onlyOwner
@@ -119,7 +122,7 @@ contract StakingPool is Ownable {
         require(reward > 0, "Reward must not be null");
         TransferHelper.safeTransferFrom(
             token,
-            msg.sender,
+            treasuryAddress,
             address(this),
             reward
         );
