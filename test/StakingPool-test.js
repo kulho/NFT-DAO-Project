@@ -25,6 +25,7 @@ contract("Staking pool tests", async (accounts) => {
       INITIAL_ETH_LIQUIDITY * INITIAL_POOL_PRICE
     );
     pool = await Pool.new(token.address, accounts[0]);
+    pool.setTreasuryAddress(accounts[0]);
   });
 
   describe("constructor", () => {
@@ -159,6 +160,21 @@ contract("Staking pool tests", async (accounts) => {
 
       let tokenDelegationAddress = await token.delegates(pool.address);
       assert.equal(tokenDelegationAddress, accounts[1]);
+    });
+  });
+
+  describe("setTreasuryAddress", () => {
+    it("should revert if not called by the owner", async () => {
+      await expectRevert(
+        pool.setTreasuryAddress(accounts[1], { from: accounts[1] }),
+        "Ownable: caller is not the owner"
+      );
+    });
+
+    it("it is possible to set the treasury address", async () => {
+      await pool.setTreasuryAddress(accounts[1]);
+      let treasuryAddress = await pool.treasuryAddress();
+      assert.equal(treasuryAddress, accounts[1]);
     });
   });
 
