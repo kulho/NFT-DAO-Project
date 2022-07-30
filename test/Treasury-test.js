@@ -297,12 +297,41 @@ contract("Governance token tests", (accounts) => {
   });
 
   describe("approveToPool", async () => {
-    it.skip("it is possible to approve tokens to the pool", async () => {
-      assert(true);
+    it("it is possible to approve tokens to the pool", async () => {
+      let balance, allowance;
+      await web3.eth.sendTransaction({
+        from: accounts[0],
+        to: treasury.address,
+        value: web3.utils.toWei("2", "ether"),
+      });
+      await treasury.swapAllWeth();
+      await treasury.approveToPool();
+      balance = await token.balanceOf(treasury.address);
+      allowance = await token.allowance(treasury.address, stakingPool.address);
+      assert(balance.eq(allowance));
     });
 
-    it.skip("approved tokens can be withdrawn from the treasury", async () => {
-      assert(true);
+    it.only("approved tokens can be withdrawn from the treasury", async () => {
+      let balanceBefore, balanceAfter;
+      await stakingPool.setTreasuryAddress(treasury.address);
+      await web3.eth.sendTransaction({
+        from: accounts[0],
+        to: treasury.address,
+        value: web3.utils.toWei("2", "ether"),
+      });
+      await treasury.swapAllWeth();
+      await treasury.approveToPool();
+      balanceBefore = await token.balanceOf(treasury.address);
+      await stakingPool.notifyRewardAmount(balanceBefore);
+      balanceAfter = await token.balanceOf(stakingPool.address);
+      assert(balanceBefore.eq(balanceAfter));
+    });
+
+    it.only("should revert if not called by the owner", async () => {
+      await expectRevert(
+        treasury.approveToPool(0, { from: accounts[1] }),
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
