@@ -336,14 +336,42 @@ contract("Governance token tests", (accounts) => {
   });
 
   describe("integration test", async () => {
-    it.skip("create and collect fees, swap to token, approve pool and collect by the pool", async () => {
-      assert(true);
-    });
-  });
+    it("create and collect fees, swap to token, approve pool and collect by the pool", async () => {
+      let swapRouter, weth9, wethValue, tokenValue, rewardRate, i;
+      // create contracts
+      weth9 = await WETH9.at(WETH);
+      swapRouter = await SwapRouter.at(SWAP_ROUTER);
 
-  describe("template", async () => {
-    it.skip("template", async () => {
-      assert(true);
+      // get weth and swap it for tokens
+      wethValue = web3.utils.toWei("2", "ether");
+      await weth9.deposit({ from: accounts[0], value: wethValue });
+
+      for (i = 0; i < 50; i++) {
+        wethValue = await weth9.balanceOf(accounts[0]);
+        await weth9.approve(SWAP_ROUTER, wethValue, { from: accounts[0] });
+        await swapWeth2Token(swapRouter, wethValue.toString());
+
+        // assert weth was swapped
+        tokenValue = await token.balanceOf(accounts[0]);
+
+        // approve and swap tokens to weth
+        await token.approve(SWAP_ROUTER, tokenValue, { from: accounts[0] });
+        await swapToken2Weth(swapRouter, tokenValue.toString());
+      }
+
+      // collect fees
+      await treasury.collectAllFees();
+      // swap collected weth for token
+      await treasury.swapAllWeth();
+      // approve all tokens to staking pool
+      await treasury.approveToPool();
+      // set treasury address to the staking pool and get token balance
+      await stakingPool.setTreasuryAddress(treasury.address);
+      tokenValue = await token.balanceOf(treasury.address);
+      // notify the rewards to the staking pool and assert new rewardRate is greater than zero
+      await stakingPool.notifyRewardAmount(tokenValue);
+      rewardRate = await stakingPool.rewardRate();
+      assert(rewardRate.gt(ZERO));
     });
   });
 });
