@@ -35,16 +35,12 @@ module.exports = async function (deployer, _, accounts) {
   }
 
   var nonce = await web3.eth.getTransactionCount(accounts[0], "pending");
-  //   console.log(nonce);
-  //   console.log(accounts[0]);
   var treasuryAddress =
     "0x" +
     web3.utils
       .sha3(RLP.encode([accounts[0], nonce + 1]))
       .slice(12)
       .substring(14);
-
-  //   console.log(treasuryAddress);
 
   await token.transfer(treasuryAddress, web3.utils.toWei("10000", "ether"), {
     from: accounts[0],
@@ -64,9 +60,12 @@ module.exports = async function (deployer, _, accounts) {
   );
   let treasury = await Treasury.deployed();
 
-  // TODO add treasury address to staking pool contract and transfer its ownership
+  await stakingPool.setTreasuryAddress(treasury.address);
 
   governanceTimeLock = await GovernanceTimeLock.deployed();
+  await stakingPool.transferOwnership(governanceTimeLock.address, {
+    from: accounts[0],
+  });
   await treasury.transferOwnership(governanceTimeLock.address, {
     from: accounts[0],
   });
