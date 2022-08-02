@@ -1,7 +1,7 @@
 const GovernorContract = artifacts.require("GovernorContract");
 const GovernanceTimeLock = artifacts.require("GovernanceTimeLock");
-const Box = artifacts.require("Box");
 const { time } = require("@openzeppelin/test-helpers");
+const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const Epoch = artifacts.require("Epoch");
 const GovernanceToken = artifacts.require("GovernanceToken");
 const Pool = artifacts.require("IUniswapV3Pool");
@@ -88,6 +88,7 @@ contract("DAO integration test", (accounts) => {
     treasury = await Treasury.deployed();
     weth = await WETH9.at(WETH);
 
+    const deployBlock = await web3.eth.getBlock("latest");
     await time.advanceBlockTo(deployBlock.number + VOTING_DELAY);
   });
 
@@ -141,21 +142,51 @@ contract("DAO integration test", (accounts) => {
       await swapToken2Weth(swapRouter, tokenValue.toString());
     }
 
-    //
-    //
-    //
-    //
-    //
-    //
+    // send some ether to the treasury to emulate gain of royalties
+    await web3.eth.sendTransaction({
+      from: accounts[0],
+      to: treasury.address,
+      value: web3.utils.toWei("2", "ether"),
+    });
 
-    encodedFunction = await box.contract.methods
-      .store(NEW_STORE_VALUE)
+    // create and pass proposal to collect fees, then swap everything
+    // for token and approve to pool, notify rewards to the staking pool
+
+    // get enough voting power
+    await weth.deposit({
+      from: accounts[0],
+      value: web3.utils.toWei("5", "ether"),
+    });
+    await weth.approve(SWAP_ROUTER, web3.utils.toWei("5", "ether"));
+    await swapWeth2Token(swapRouter, web3.utils.toWei("5", "ether"));
+
+    // encode functions
+    let functionList = [];
+    let targetList = [];
+    let valueList = [0, 0, 0];
+    functionList[0] = await treasury.contract.methods
+      .collectAllFees()
       .encodeABI();
+    targetList[0] = treasury.address;
 
-    proposeTX = await governorContract.propose(
-      [box.address],
-      [0],
-      [encodedFunction],
+    functionList[1] = await treasury.contract.methods.swapAllWeth().encodeABI();
+    targetList[1] = treasury.address;
+
+    functionList[2] = await treasury.contract.methods
+      .approveToPool()
+      .encodeABI();
+    targetList[2] = treasury.address;
+
+    // tokenValue = await token.balanceOf(treasury.address);
+    // functionList[3] = await stakingPool.contract.methods
+    //   .notifyRewardAmount(tokenValue)
+    //   .encodeABI();
+    // targetList[3] = stakingPool.address;
+
+    let proposeTX = await governorContract.propose(
+      targetList,
+      valueList,
+      functionList,
       PROPOSAL_DESCRIPTION,
       { from: accounts[0] }
     );
@@ -175,9 +206,9 @@ contract("DAO integration test", (accounts) => {
     let descriptionHash = web3.utils.keccak256(PROPOSAL_DESCRIPTION);
 
     await governorContract.queue(
-      [box.address],
-      [0],
-      [encodedFunction],
+      targetList,
+      valueList,
+      functionList,
       descriptionHash,
       { from: accounts[0] }
     );
@@ -185,15 +216,15 @@ contract("DAO integration test", (accounts) => {
     await time.increase(MIN_DELAY);
 
     await governorContract.execute(
-      [box.address],
-      [0],
-      [encodedFunction],
+      targetList,
+      valueList,
+      functionList,
       descriptionHash,
       { from: accounts[0] }
     );
 
-    newVal = await box.retrieve();
+    // newVal = await box.retrieve();
 
-    assert.equal(NEW_STORE_VALUE, newVal);
+    // assert.equal(NEW_STORE_VALUE, newVal);
   });
 });
