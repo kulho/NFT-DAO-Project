@@ -2,7 +2,7 @@ const GovernorContract = artifacts.require("GovernorContract");
 const GovernanceToken = artifacts.require("GovernanceToken");
 const GovernanceTimeLock = artifacts.require("GovernanceTimeLock");
 
-QUORUM = 51; /* 51% */
+QUORUM = 5; /* 5% */
 VOTING_DELAY = 10; /* 10 block */
 // VOTING_PERIOD = 45818; /* 1 week */
 VOTING_PERIOD = 20; /* testing purposes */
