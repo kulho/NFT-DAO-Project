@@ -253,7 +253,7 @@ contract("Staking pool tests", async (accounts) => {
       balanceBefore = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balanceBefore.div(new BN(2)));
       await pool.stake(balanceBefore.div(new BN(2)));
-      for (i = 0; i < 100; i++) {
+      for (i = 0; i < 50; i++) {
         random = new BN(web3.utils.randomHex(1).toString().slice(2));
         if (random.eq(new BN(0))) random = new BN(1);
         if (i != 0)

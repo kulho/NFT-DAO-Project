@@ -29,7 +29,7 @@ const SQRTPRICEX96_WETH = new BN("3543191142285914205922034323214");
 const SQRTPRICEX96_TOKEN = new BN("1771595571142957102961017161");
 const ZERO = new BN(0);
 
-contract("Governance token tests", (accounts) => {
+contract("Treasury tests", (accounts) => {
   let token, stakingPool, treasury;
 
   const swapWeth2Token = async (swapRouter, value) => {
@@ -322,7 +322,7 @@ contract("Governance token tests", (accounts) => {
       await treasury.swapAllWeth();
       await treasury.approveToPool();
       balanceBefore = await token.balanceOf(treasury.address);
-      await stakingPool.notifyRewardAmount(balanceBefore);
+      await stakingPool.notifyReward();
       balanceAfter = await token.balanceOf(stakingPool.address);
       assert(balanceBefore.eq(balanceAfter));
     });
@@ -367,9 +367,8 @@ contract("Governance token tests", (accounts) => {
       await treasury.approveToPool();
       // set treasury address to the staking pool and get token balance
       await stakingPool.setTreasuryAddress(treasury.address);
-      tokenValue = await token.balanceOf(treasury.address);
       // notify the rewards to the staking pool and assert new rewardRate is greater than zero
-      await stakingPool.notifyRewardAmount(tokenValue);
+      await stakingPool.notifyReward();
       rewardRate = await stakingPool.rewardRate();
       assert(rewardRate.gt(ZERO));
     });

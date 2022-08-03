@@ -181,13 +181,10 @@ contract("DAO integration test", (accounts) => {
     targetList[2] = treasury.address;
     // notify staking pool of the new rewards
     functionList[3] = await stakingPool.contract.methods
-      .notifyRewardAmount()
+      .notifyReward()
       .encodeABI();
     targetList[3] = stakingPool.address;
 
-    console.log(functionList);
-    console.log(targetList);
-    console.log(valueList);
     // make a new proposal
     let proposeTX = await governorContract.propose(
       targetList,
