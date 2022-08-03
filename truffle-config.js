@@ -1,3 +1,5 @@
+const Web3 = require("web3");
+
 module.exports = {
   networks: {
     develop: {
@@ -11,6 +13,7 @@ module.exports = {
       host: "127.0.0.1",
     },
     development: {
+      provider: () => new Web3.providers.HttpProvider("http://127.0.0.1:8545"),
       network_id: "*",
       port: 8545,
       host: "127.0.0.1",
