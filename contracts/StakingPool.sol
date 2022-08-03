@@ -113,11 +113,8 @@ contract StakingPool is Ownable {
         treasuryAddress = _address;
     }
 
-    function notifyRewardAmount(uint256 reward)
-        external
-        onlyOwner
-        updateReward(address(0))
-    {
+    function notifyReward() external onlyOwner updateReward(address(0)) {
+        uint256 reward = IERC20(token).balanceOf(treasuryAddress);
         // Check if new tokens were sent to the pool
         require(reward > 0, "Reward must not be null");
         TransferHelper.safeTransferFrom(
