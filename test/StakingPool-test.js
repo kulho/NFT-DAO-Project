@@ -99,7 +99,7 @@ contract("Staking pool tests", async (accounts) => {
       await token.approve(pool.address, balance.div(new BN(2)));
       await pool.stake(balance.div(new BN(2)));
       await token.approve(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount(balance.div(new BN(2)));
+      await pool.notifyReward();
       await time.increase(WEEK);
       await pool.getReward();
       let newBalance = await token.balanceOf(accounts[0]);
@@ -108,13 +108,13 @@ contract("Staking pool tests", async (accounts) => {
 
     it("should not receive any reward if zero", async () => {
       let balance = await token.balanceOf(accounts[0]);
-      await token.approve(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount(balance.div(new BN(2)));
+      await token.approve(pool.address, balance);
+      await pool.notifyReward();
 
       await time.increase(WEEK);
       await pool.getReward();
       let newBalance = await token.balanceOf(accounts[0]);
-      assert.equal(balance.div(new BN(2)).toString(), newBalance.toString());
+      assert(newBalance.eq(new BN(0)));
     });
   });
 
@@ -124,7 +124,7 @@ contract("Staking pool tests", async (accounts) => {
       await token.approve(pool.address, balance.div(new BN(2)));
       await pool.stake(balance.div(new BN(2)));
       await token.approve(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount(balance.div(new BN(2)));
+      await pool.notifyReward();
       await time.increase(WEEK);
       await pool.exit();
       let newBalance = await token.balanceOf(accounts[0]);
@@ -178,37 +178,45 @@ contract("Staking pool tests", async (accounts) => {
     });
   });
 
-  describe("notifyRewardAmount", () => {
+  describe("notifyReward", () => {
     it("it is possible to notify the new rewards", async () => {
       let balance = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balance);
-      await pool.notifyRewardAmount(balance);
+      await pool.notifyReward();
     });
 
     it("should revert if not called by the owner", async () => {
       let balance = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balance);
       await expectRevert(
-        pool.notifyRewardAmount(balance, { from: accounts[1] }),
+        pool.notifyReward({ from: accounts[1] }),
         "Ownable: caller is not the owner"
       );
     });
 
-    it("should revert if no tokens were approved to the pool", async () => {
-      await expectRevert(pool.notifyRewardAmount(10), "STF");
+    it("should revert if not all tokens were approved to the pool", async () => {
+      let balance = await token.balanceOf(accounts[0]);
+      await token.approve(pool.address, balance.div(new BN(2)));
+      await expectRevert(pool.notifyReward(), "STF");
     });
 
     it("should revert reward is null", async () => {
-      await expectRevert(pool.notifyRewardAmount(0), "Reward must not be null");
+      await expectRevert(pool.notifyReward(), "Reward must not be null");
     });
 
     it("it is possible to update the reward", async () => {
       let balance = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount(balance.div(new BN(2)));
+      await token.transfer(accounts[1], balance.div(new BN(2)), {
+        from: accounts[0],
+      });
+      await pool.notifyReward();
       let rewardBefore = await pool.rewardRate();
+      await token.transfer(accounts[0], balance.div(new BN(2)), {
+        from: accounts[1],
+      });
       await token.approve(pool.address, balance.div(new BN(2)));
-      await pool.notifyRewardAmount(balance.div(new BN(2)));
+      await pool.notifyReward();
       let rewardAfter = await pool.rewardRate();
       assert(rewardBefore.lt(rewardAfter));
     });
@@ -231,7 +239,7 @@ contract("Staking pool tests", async (accounts) => {
     it("should revert if the period did not finish yet", async () => {
       let balance = await token.balanceOf(accounts[0]);
       await token.approve(pool.address, balance);
-      await pool.notifyRewardAmount(balance);
+      await pool.notifyReward();
       await expectRevert(
         pool.setRewardsDuration(10),
         "Previous rewards period must be complete before changing the duration for the new period"
@@ -248,13 +256,21 @@ contract("Staking pool tests", async (accounts) => {
       for (i = 0; i < 100; i++) {
         random = new BN(web3.utils.randomHex(1).toString().slice(2));
         if (random.eq(new BN(0))) random = new BN(1);
+        if (i != 0)
+          await token.transfer(accounts[0], balance.sub(value), {
+            from: accounts[1],
+          });
         balance = await token.balanceOf(accounts[0]);
         value = balance.mul(random).div(new BN(256));
+        await token.transfer(accounts[1], balance.sub(value));
         await token.approve(pool.address, value);
-        await pool.notifyRewardAmount(value);
+        await pool.notifyReward();
         await time.increase(WEEK / 2);
         await pool.getReward({ gas: 30000000 });
       }
+      await token.transfer(accounts[0], balance.sub(value), {
+        from: accounts[1],
+      });
       await time.increase(WEEK);
       await pool.getReward({ gas: 30000000 });
       newBalance = await token.balanceOf(accounts[0]);
