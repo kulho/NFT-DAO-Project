@@ -146,43 +146,49 @@ contract("DAO integration test", (accounts) => {
     await web3.eth.sendTransaction({
       from: accounts[0],
       to: treasury.address,
-      value: web3.utils.toWei("2", "ether"),
+      value: web3.utils.toWei("1", "ether"),
     });
 
     // create and pass proposal to collect fees, then swap everything
     // for token and approve to pool, notify rewards to the staking pool
 
     // get enough voting power
+    let ethvalue = web3.utils.toWei("1", "ether");
     await weth.deposit({
       from: accounts[0],
-      value: web3.utils.toWei("5", "ether"),
+      value: ethvalue,
     });
-    await weth.approve(SWAP_ROUTER, web3.utils.toWei("5", "ether"));
-    await swapWeth2Token(swapRouter, web3.utils.toWei("5", "ether"));
+    await weth.approve(SWAP_ROUTER, ethvalue);
+    await swapWeth2Token(swapRouter, ethvalue);
 
     // encode functions
     let functionList = [];
     let targetList = [];
-    let valueList = [0, 0, 0];
+    let valueList = [0, 0, 0, 0];
+
+    // collect fees from uniswap pool
     functionList[0] = await treasury.contract.methods
       .collectAllFees()
       .encodeABI();
     targetList[0] = treasury.address;
-
+    // swap all eth and weth to token
     functionList[1] = await treasury.contract.methods.swapAllWeth().encodeABI();
     targetList[1] = treasury.address;
-
+    // approve all tokens to the staking pool
     functionList[2] = await treasury.contract.methods
       .approveToPool()
       .encodeABI();
     targetList[2] = treasury.address;
+    // notify staking pool of the new rewards
+    functionList[3] = await stakingPool.contract.methods
+      .notifyRewardAmount()
+      .encodeABI();
+    targetList[3] = stakingPool.address;
 
-    // tokenValue = await token.balanceOf(treasury.address);
-    // functionList[3] = await stakingPool.contract.methods
-    //   .notifyRewardAmount(tokenValue)
-    //   .encodeABI();
-    // targetList[3] = stakingPool.address;
-
+    console.log(functionList);
+    console.log(targetList);
+    console.log(valueList);
+    // make a new proposal
     let proposeTX = await governorContract.propose(
       targetList,
       valueList,
@@ -193,18 +199,18 @@ contract("DAO integration test", (accounts) => {
 
     let proposalId = await proposeTX.receipt.logs[0].args.proposalId;
 
+    // skip time to voting period
     let currentBlock = await web3.eth.getBlock("latest");
-
     await time.advanceBlockTo(currentBlock.number + VOTING_DELAY);
-
+    // vote for the proposal
     await governorContract.castVoteWithReason(proposalId, VOTE, "Cuz I can", {
       from: accounts[0],
     });
+    // skip time to approve proposal
     currentBlock = await web3.eth.getBlock("latest");
     await time.advanceBlockTo(currentBlock.number + VOTING_PERIOD);
-
+    // queue the proposal for execution
     let descriptionHash = web3.utils.keccak256(PROPOSAL_DESCRIPTION);
-
     await governorContract.queue(
       targetList,
       valueList,
@@ -212,15 +218,15 @@ contract("DAO integration test", (accounts) => {
       descriptionHash,
       { from: accounts[0] }
     );
-
+    // skip time till execution
     await time.increase(MIN_DELAY);
-
+    // execute the proposal
     await governorContract.execute(
       targetList,
       valueList,
       functionList,
       descriptionHash,
-      { from: accounts[0] }
+      { from: accounts[0], gaz: 30000000 }
     );
 
     // newVal = await box.retrieve();
