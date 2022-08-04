@@ -1,9 +1,9 @@
 const Pool = artifacts.require("StakingPool");
 const Token = artifacts.require("GovernanceToken");
-const { expectRevert, BN } = require("@openzeppelin/test-helpers");
+const { expectRevert } = require("@openzeppelin/test-helpers");
 const { time } = require("@openzeppelin/test-helpers");
-const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 
+var BN = web3.utils.BN;
 EPOCH_ADDRESS = "0xBAc959f049066b3F699D1FbBd62a755c55C19752";
 NAME = "GovernanceToken";
 SYMBOL = "GTK";
@@ -254,7 +254,7 @@ contract("Staking pool tests", async (accounts) => {
       await token.approve(pool.address, balanceBefore.div(new BN(2)));
       await pool.stake(balanceBefore.div(new BN(2)));
       for (i = 0; i < 50; i++) {
-        random = new BN(web3.utils.randomHex(1).toString().slice(2));
+        random = new BN(web3.utils.randomHex(1).toString().slice(2), 16);
         if (random.eq(new BN(0))) random = new BN(1);
         if (i != 0)
           await token.transfer(accounts[0], balance.sub(value), {

@@ -6,9 +6,7 @@ const Pool = artifacts.require("StakingPool");
 const UniswapPool = artifacts.require("IUniswapV3Pool");
 const SwapRouter = artifacts.require("ISwapRouter");
 const WETH9 = artifacts.require("IWETH9");
-
 const { expectRevert } = require("@openzeppelin/test-helpers");
-const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 
 EPOCH_ADDRESS = "0xBAc959f049066b3F699D1FbBd62a755c55C19752";
 NAME = "GovernanceToken";

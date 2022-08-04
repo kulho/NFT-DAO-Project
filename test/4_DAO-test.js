@@ -1,7 +1,6 @@
 const GovernorContract = artifacts.require("GovernorContract");
 const GovernanceTimeLock = artifacts.require("GovernanceTimeLock");
 const { time } = require("@openzeppelin/test-helpers");
-const { web3 } = require("@openzeppelin/test-helpers/src/setup");
 const Epoch = artifacts.require("Epoch");
 const GovernanceToken = artifacts.require("GovernanceToken");
 const Pool = artifacts.require("IUniswapV3Pool");
@@ -19,7 +18,6 @@ const POOL_FEE = 3000;
 
 // Proposal
 PROPOSAL_DESCRIPTION = "Proposal #1: Integration test";
-NEW_STORE_VALUE = 5;
 VOTING_DELAY = 10; /* 10 block */
 // VOTING_PERIOD = 45818; /* 1 week */
 VOTING_PERIOD = 20; /* testing purposes */
@@ -225,9 +223,12 @@ contract("DAO integration test", (accounts) => {
       descriptionHash,
       { from: accounts[0], gaz: 30000000 }
     );
-
-    // newVal = await box.retrieve();
-
-    // assert.equal(NEW_STORE_VALUE, newVal);
+    // skip time to accrue staked rewards
+    await time.increase(WEEK);
+    // collect reward and assert balance increased
+    balanceBefore = await token.balanceOf(accounts[0]);
+    await stakingPool.getReward();
+    balanceAfter = await token.balanceOf(accounts[0]);
+    assert(balanceBefore.lt(balanceAfter));
   });
 });

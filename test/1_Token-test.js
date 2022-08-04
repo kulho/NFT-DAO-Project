@@ -74,8 +74,4 @@ contract("Governance token tests", (accounts) => {
       "All of your NFTs have already been claimed."
     );
   });
-
-  it.skip("template", async () => {
-    assert(true);
-  });
 });
